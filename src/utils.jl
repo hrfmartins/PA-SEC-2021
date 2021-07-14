@@ -52,4 +52,6 @@ function isEqual(exp)
     return exp.args[1] == :(==)
 end
 
-macro evaluateSecond(exp, env) return :(evaluate(second_operand($exp), $env)) end
+function self_evaluating(exp, env) 
+    return typeof(exp)<:Number || typeof(exp)<:String
+end

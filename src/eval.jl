@@ -1,14 +1,9 @@
 include("utils.jl")
 
 function evaluate(exp, env)
-    if (typeof(exp) == Int64)
+    if (self_evaluating(exp, env))
         return exp
     end
-
-    if (typeof(exp) == String)
-        return exp
-    end
-
     if (typeof(exp) == Expr)
         if isAddition(exp)
             evaluate(first_operand(exp), env) + evaluate(second_operand(exp), env)
@@ -51,5 +46,3 @@ function evaluate(exp, env)
         error("Unknown ", exp, " Type")
     end
 end
-
-@ifeval isBiggerOrEqualOp(exp)
