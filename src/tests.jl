@@ -1,3 +1,5 @@
+using Core: Vector
+using Base: Number, String, Symbol, eval_user_input
 include("eval.jl")
 using Test
 
@@ -23,3 +25,6 @@ using Test
 
 @test evaluate(Meta.parse("(1+1) >= (0+1)"), Nothing) == true
 
+@test evaluate(Meta.parse("\"Hello World\""), Nothing) == "Hello World"
+
+@test evaluate(Meta.parse("3 > 2 ? 1 : 0"), Nothing) == 1
