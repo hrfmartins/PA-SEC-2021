@@ -14,19 +14,56 @@ function is_name(exp)
     return typeof(exp) == Symbol
 end
 
-function eval_name(exp, env)
-    #TODO
+function eval_name(name, env)
+    if (env == []) # Reached the end and it wasnt there, it's unbound!
+        error(string("Unbound name", env, "EVAL-NAME"))
+    elseif (name == env[1][1])
+        return env[1][2]
+    else
+        eval_name(name, env[2:length(x)]) #recursively call with the rest of the list
+
+    end
 end
 
-function let_expr(expr)
-    if (typeof(expr) == Vector)
-        return expr.head == Vector
+function let_expr(exp)
+    if (isa(exp, Expr) && exp.head == :let)
+        return true
     end
     return false
 end
 
+function let_names(exp)
+    l = []
+    for p in exp.args[1].args
+        if isa(p, Symbol)
+            push!(l, String(p))
+        elseif isa(p, Number)
+            continue
+        else
+            push!(l, String(p.args[1]))
+        end
+    end
+    return l
+end
+
+function let_inits(exp)
+    l = []
+    for p in exp.args[1].args
+        if isa(p, Number)
+            push!(l, p)
+        elseif isa(p, Symbol)
+            continue
+        else
+            push!(l, p.args[2])
+        end
+    end
+    return l
+end
+
+let_body(exp) = exp.args[2].args[2]
+
 function eval_expr()
-    #TODO
+    #TODO 19:41 Teo 2020-04-29 15.20
 end
 
 function eval_ternary(exp, env)
