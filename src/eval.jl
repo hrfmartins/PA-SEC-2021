@@ -1,4 +1,5 @@
 include("utils.jl")
+include("predef.jl")
 
 function evaluate(exp, env)
     if (self_evaluating(exp))
@@ -18,39 +19,11 @@ function evaluate(exp, env)
         elseif (let_expr(exp))
             eval_let(exp, env)
             
-        else # In case its a simple expression like an addition
-            if isAddition(exp)
-                evaluate(first_operand(exp), env) + evaluate(second_operand(exp), env)
-        
-            elseif isSubtraction(exp)
-                evaluate(first_operand(exp), env) - evaluate(second_operand(exp), env)
-        
-            elseif isMultiplication(exp)
-                evaluate(first_operand(exp), env) * evaluate(second_operand(exp), env)
-        
-            elseif isRemainder(exp)
-                evaluate(first_operand(exp), env) % evaluate(second_operand(exp), env)
-        
-            elseif isDivision(exp)
-                evaluate(first_operand(exp), env) / evaluate(second_operand(exp), env)
-        
-            elseif isRationalDivision(exp)
-                evaluate(first_operand(exp), env) // evaluate(second_operand(exp), env)
-        
-            elseif isEqual(exp)
-                evaluate(first_operand(exp), env) == evaluate(second_operand(exp), env)
-        
-            elseif isSmallerOp(exp)
-                evaluate(first_operand(exp), env) < evaluate(second_operand(exp), env)
-        
-            elseif isBiggerOp(exp)
-                evaluate(first_operand(exp), env) > evaluate(second_operand(exp), env)
-        
-            elseif isSmallerOrEqualOp(exp)
-                evaluate(first_operand(exp), env) <= evaluate(second_operand(exp), env)
-        
-            elseif isBiggerOrEqualOp(exp)
-                evaluate(first_operand(exp), env) >= evaluate(second_operand(exp), env)
+        elseif is_primitive(exp) # In case its a simple expression like an addition
+            if (length(exp.args) == 3)
+                apply_primitive(exp, evaluate(exp.args[2], env), evaluate(exp.args[3], env), env)
+            elseif (length(exp.args) == 2)
+                apply_primitive_single(exp, evaluate(exp.args[2], env), env)
             end
         end
     
