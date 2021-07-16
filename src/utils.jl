@@ -1,4 +1,3 @@
-
 function second_operand(exp)
     return exp.args[3]
 end
@@ -7,53 +6,8 @@ function first_operand(exp)
     return exp.args[2]
 end
 
-function isAddition(exp)
-    return exp.args[1] == :+
-end
-
-function isSubtraction(exp)
-    return exp.args[1] == :-
-end
-
-function isMultiplication(exp)
-    return exp.args[1] == :*
-end
-
-function isDivision(exp)
-    return exp.args[1] == :/
-end
-
-function isRationalDivision(exp)
-    return exp.args[1] == ://
-end
-
-
-function isRemainder(exp)
-    return exp.args[1] == :%
-end
-
-function isBiggerOp(exp)
-    return exp.args[1] == :>
-end
-
-function isSmallerOp(exp)
-    return exp.args[1] == :<
-end
-
-function isSmallerOrEqualOp(exp)
-    return exp.args[1] == :<=
-end
-
-function isBiggerOrEqualOp(exp)
-    return exp.args[1] == :>=
-end
-
-function isEqual(exp)
-    return exp.args[1] == :(==)
-end
-
 function self_evaluating(exp) 
-    return typeof(exp)<:Number || typeof(exp)<:String
+    return isa(exp, Number) || isa(exp,String) || isa(exp, Bool)
 end
 
 function is_name(exp)
@@ -76,10 +30,18 @@ function eval_expr()
 end
 
 function eval_ternary(exp, env)
-    if (evaluate(exp.args[1], env))
-        exp.args[2]
+    if (is_true(exp.args[1], env))
+        evaluate(exp.args[2], env)
     else
-        exp.args[3]
+        evaluate(exp.args[3], env)
+    end
+end
+
+function is_true(exp, env)
+    if (evaluate(exp, env))
+        return true
+    else
+        return false
     end
 end
 
