@@ -5,9 +5,9 @@ function repl()
         prompt_for_input()
         value = readline()
         while ( Meta.parse(value, raise = false).head == :incomplete )
-            value = value + readline()
+            value = string(value, "\n", readline())
         end
-        evaluate(Meta.parse(value), empty_environment())
+        println(evaluate(Meta.parse(value), empty_environment()))
     end
 
 end
