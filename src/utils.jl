@@ -123,18 +123,26 @@ end
 
 function filter_flets(exp)
     flets = []
-    nonflets = []
-    for el in exp.args[1].args
-        if isa(el, Symbol)
-            push!(nonflets, exp.args[1])
-            break
-        elseif isa(el.args[1], Symbol)
-            push!(nonflets, el)
-        else
-            push!(flets, el)
+    lets = []
+
+    if (typeof(exp.args[1].args[1]) == Symbol) # Single let x = 1; x + 1
+        push!(lets, exp.args[1])
+
+    elseif (exp.args[1].args[1].head == :call)
+        push!(flets, exp.args[1])
+        
+    elseif (isa(exp.args[1].args[1], Expr))
+        for e in exp.args[1].args
+            if (e.head == :call)
+                continue
+            elseif (typeof(e.args[1]) == Symbol)
+                push!(lets, e)
+            elseif (isa(e.args[1], Expr))
+                push!(flets, e)
+            end
         end
     end
-    return (flets, nonflets)
+    return (flets, lets)
 end
 
 function eval_flet(exp, env)
