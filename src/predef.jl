@@ -1,20 +1,3 @@
-pre_def = [ (:+, make_primitive(+)),
-            (:-, make_primitive(-)),
-            (:/, make_primitive(/)),
-            (:*, make_primitive(*)),
-            (:>, make_primitive(>)),
-            (:<, make_primitive(<)),
-            (:(>=), make_primitive(>=)),
-            (:(<=), make_primitive(<=)),
-            (:(==), make_primitive(==)),
-            (:(!=), make_primitive(!=)),
-            (:%, make_primitive(%)),
-            (:!, make_primitive_single(!)),
-            (:(//), make_primitive(//))
-]
-
-const_bindings = [(:pi, 3.14159),  (:e, 2.71828)]
-
 function make_primitive(exp)
     eval(Meta.parse(string("(x,y) -> ", String(Symbol(exp)), "( x", ", y)")))
 end
@@ -42,3 +25,20 @@ end
 function apply_primitive_single(exp, p, env)
     filter(x -> x[1] == exp.args[1], env)[1][2](p)
 end
+
+pre_def = [ (:+, make_primitive(+)),
+            (:-, make_primitive(-)),
+            (:/, make_primitive(/)),
+            (:*, make_primitive(*)),
+            (:>, make_primitive(>)),
+            (:<, make_primitive(<)),
+            (:(>=), make_primitive(>=)),
+            (:(<=), make_primitive(<=)),
+            (:(==), make_primitive(==)),
+            (:(!=), make_primitive(!=)),
+            (:%, make_primitive(%)),
+            (:!, make_primitive_single(!)),
+            (:(//), make_primitive(//))
+]
+
+const_bindings = [(:pi, 3.14159),  (:e, 2.71828)]

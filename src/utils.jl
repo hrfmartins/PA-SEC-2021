@@ -36,11 +36,11 @@ function let_names(exp)
     l = []
     for p in exp.args[1].args
         if isa(p, Symbol)
-            push!(l, String(p))
+            push!(l, Symbol(p))
         elseif isa(p, Number)
             continue
         else
-            push!(l, String(p.args[1]))
+            push!(l, Symbol(p.args[1]))
         end
     end
     return l
@@ -113,16 +113,22 @@ end
 
 function eval_expr(expr, env)
     l = []
-    if (expr != Nothing)
-        l
+    if (expr == [])
+        return []
     else
-        push!(l, evaluate(expr[1], env), evalexpr(expr[2:length(expr)], env))
+        push!(l, evaluate(expr[1], env))
+        x = eval_expr(expr[2:length(expr)], env)
+
+        if (x != [])
+            append!(l, x)
+        end
     end
     l
 end
 
+
 function augment_environment(names, values, env)
-    if names == ()
+    if names == [] || values == []
         env
     else
         pushfirst!(augment_environment(names[2:length(names)], values[2:length(values)], env), (names[1], values[1]))
@@ -130,5 +136,5 @@ function augment_environment(names, values, env)
 end
 
 function empty_environment()
-    []
+    vcat(initial_bindings(), primitive_functions())
 end

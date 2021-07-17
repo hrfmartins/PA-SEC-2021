@@ -1,4 +1,3 @@
-using Test: Meta
 include("eval.jl")
 using Test
 
@@ -47,3 +46,16 @@ initial = vcat(initial_bindings(), primitive_functions())
 @test evaluate(Meta.parse("e"), initial) == 2.71828
 
 @test evaluate(Meta.parse("e + 1"), initial) == 3.71828
+
+@test evaluate(Meta.parse("let x=1; x; end"), initial) == 1
+
+@test evaluate(Meta.parse("let x=2; x*pi; end"), initial) == 6.28318
+
+@test evaluate(Meta.parse("let a=1, b=2; b; end"), initial) == 2
+
+@test evaluate(Meta.parse("let a=1, b=2; let a=3; a+b; end; end"), initial) == 5
+
+@test evaluate(Meta.parse(" let a = 1 
+a + 2 
+end"), initial) == 3
+
