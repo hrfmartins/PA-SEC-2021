@@ -53,6 +53,10 @@ initial = vcat(initial_bindings(), primitive_functions())
 
 @test evaluate(Meta.parse("let a=1, b=2; b; end"), initial) == 2
 
+@test evaluate(Meta.parse("let a=1, b=2; b; end == 2"), initial) == true
+
+@test evaluate(Meta.parse("let e=1; e; end"), initial) == 1 # Redefining "constants"
+
 @test evaluate(Meta.parse("let a=1, b=2; let a=3; a+b; end; end"), initial) == 5
 
 @test evaluate(Meta.parse(" let a = 1 
