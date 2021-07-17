@@ -206,3 +206,25 @@ end
 function make_function(params, body)
     return (:function, (params, body))
 end
+
+function is_function(obj)
+    if (isa(obj, Pair)) 
+        if (obj[1] == :Function)
+            return true
+        end
+    return false
+    end
+end
+
+function_parameters(func) = func[2][1]
+
+function_body(func) = func[2][2]
+
+function eval_call(exp, env)
+    func = eval_name(call_operator(exp), env)
+    args = eval_expr(call_operands(exp), env)
+    
+    extended_env = augment_environment(function_parameters(func), args, env)
+    evaluate(function_body(func), extended_env)
+end
+
