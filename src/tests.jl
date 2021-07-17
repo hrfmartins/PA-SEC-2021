@@ -41,3 +41,9 @@ initial = vcat(initial_bindings(), primitive_functions())
 @test evaluate(Meta.parse("!false"), initial) == true # denial of booleans
 
 @test evaluate(Meta.parse("!(1 > 2)"), initial) == true # denial of conditions
+
+@test evaluate(Meta.parse("pi"), initial) == 3.14159
+
+@test evaluate(Meta.parse("e"), initial) == 2.71828
+
+@test evaluate(Meta.parse("e + 1"), initial) == 3.71828

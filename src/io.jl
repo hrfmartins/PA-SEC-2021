@@ -1,11 +1,15 @@
 include("eval.jl")
 
 function repl()
-    while (true)
+    while(true)
         prompt_for_input()
         value = readline()
-        println(evaluate(Meta.parse(value), Nothing))
+        while ( Meta.parse(value, raise = false).head == :incomplete )
+            value = value + readline()
+        end
+        evaluate(Meta.parse(value), empty_environment())
     end
+
 end
 
 function prompt_for_input()

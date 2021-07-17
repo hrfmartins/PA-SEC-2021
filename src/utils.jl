@@ -11,7 +11,7 @@ function self_evaluating(exp)
 end
 
 function is_name(exp)
-    return typeof(exp) == Symbol
+    return isa(exp, Symbol)
 end
 
 function eval_name(name, env)
@@ -20,7 +20,7 @@ function eval_name(name, env)
     elseif (name == env[1][1])
         return env[1][2]
     else
-        eval_name(name, env[2:length(x)]) #recursively call with the rest of the list
+        eval_name(name, env[2:length(env)]) #recursively call with the rest of the list
 
     end
 end
@@ -62,7 +62,7 @@ end
 
 let_body(exp) = exp.args[2].args[2]
 
-function eval_expr()
+function eval_expr(expr, env)
     #TODO 19:41 Teo 2020-04-29 15.20
 end
 
@@ -103,4 +103,32 @@ function eval_if(exp, env)
         return exp.args[2]
     end
     #TODO
+end
+
+function eval_let(exp, env)
+    values = eval_expr(let_inits(exp), env)
+    extended_environment = augment_environment(let_names(exp), values, env)
+    evaluate(let_body(exp), extended_environment)
+end
+
+function eval_expr(expr, env)
+    l = []
+    if (expr != Nothing)
+        l
+    else
+        push!(l, evaluate(expr[1], env), evalexpr(expr[2:length(expr)], env))
+    end
+    l
+end
+
+function augment_environment(names, values, env)
+    if names == ()
+        env
+    else
+        pushfirst!(augment_environment(names[2:length(names)], values[2:length(values)], env), (names[1], values[1]))
+    end
+end
+
+function empty_environment()
+    []
 end
