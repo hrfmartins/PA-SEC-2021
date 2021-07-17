@@ -1,3 +1,4 @@
+using Base: Symbol
 include("eval.jl")
 using Test
 
@@ -63,3 +64,4 @@ initial = vcat(initial_bindings(), primitive_functions())
 a + 2 
 end"), initial) == 3
 
+@test evaluate(Meta.parse("let x(y)=y+1; x(1); end"), initial) == 5

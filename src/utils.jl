@@ -32,25 +32,38 @@ function let_expr(exp)
     return false
 end
 
+function flet_expr(exp)
+    if (isa(exp, Expr) && exp.head == :let)
+        if (isa(exp.args[1].args[1],Expr))
+            if (exp.args[1].args[1].head == :call)
+                return true
+            end
+        end
+    end
+    return false
+end
+
 function let_names(exp)
     l = []
-    for p in exp.args[1].args
-        if isa(p, Symbol)
-            push!(l, Symbol(p))
+
+    for p in exp
+        if isa(p.args[1], Symbol)
+            push!(l, Symbol(p.args[1]))
         elseif isa(p, Number)
             continue
         else
             push!(l, Symbol(p.args[1]))
         end
     end
+    
     return l
 end
 
 function let_inits(exp)
     l = []
-    for p in exp.args[1].args
-        if isa(p, Number)
-            push!(l, p)
+    for p in exp
+        if isa(p.args[2], Number)
+            push!(l, p.args[2])
         elseif isa(p, Symbol)
             continue
         else
@@ -61,10 +74,6 @@ function let_inits(exp)
 end
 
 let_body(exp) = exp.args[2].args[2]
-
-function eval_expr(expr, env)
-    #TODO 19:41 Teo 2020-04-29 15.20
-end
 
 function eval_ternary(exp, env)
     if (is_true(exp.args[1], env))
@@ -102,13 +111,36 @@ function eval_if(exp, env)
     if (evaluate(exp.args[1], env))
         return exp.args[2]
     end
-    #TODO
+    #TODO evaluate normal if conditions
 end
 
 function eval_let(exp, env)
-    values = eval_expr(let_inits(exp), env)
-    extended_environment = augment_environment(let_names(exp), values, env)
-    evaluate(let_body(exp), extended_environment)
+    (flets, lets) = filter_flets(exp)
+    extended_environment = augment_environment(let_names(lets), eval_expr(let_inits(lets), env), env)
+    extended_environment = augment_environment(flet_func_names(flets), flet_functions(flets), extended_environment)
+    evaluate(flet_func_body(exp), extended_environment)
+end
+
+function filter_flets(exp)
+    flets = []
+    nonflets = []
+    for el in exp.args[1].args
+        if isa(el, Symbol)
+            push!(nonflets, exp.args[1])
+            break
+        elseif isa(el.args[1], Symbol)
+            push!(nonflets, el)
+        else
+            push!(flets, el)
+        end
+    end
+    return (flets, nonflets)
+end
+
+function eval_flet(exp, env)
+    extended_env = augment_environment(flet_func_names(exp), flet_functions(exp), env)
+    evaluate(flet_func_body(exp), extended_env)
+
 end
 
 function eval_expr(expr, env)
@@ -131,10 +163,38 @@ function augment_environment(names, values, env)
     if names == [] || values == []
         env
     else
-        pushfirst!(augment_environment(names[2:length(names)], values[2:length(values)], env), (names[1], values[1]))
+        newEnv = deepcopy(env)
+        pushfirst!(augment_environment(names[2:length(names)], values[2:length(values)], newEnv), (names[1], values[1]))
     end
 end
 
 function empty_environment()
     vcat(initial_bindings(), primitive_functions())
+end
+
+function is_call(expr)
+    if (expr.head == :call)
+        return true
+    end
+    return false
+end
+
+call_operator(expr) = expr.args[1]
+
+call_operands(expr) = expr.args[2:length(expr.args)]
+
+flet_func_names(expr) = [x.args[1].args[1] for x in expr]
+
+flet_func_body(expr) = expr.args[2].args[2]
+
+flet_body(expr) = expr.args[2]
+
+flet_params(expr) = expr.args[1].args[2:length(expr.args[1].args)]
+
+function flet_functions(expr)
+    [make_function(flet_params(x), flet_func_body(x)) for x in expr]
+end
+
+function make_function(params, body)
+    return (:function, (params, body))
 end
