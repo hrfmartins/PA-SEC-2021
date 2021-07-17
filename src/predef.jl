@@ -15,7 +15,7 @@ function primitive_functions()
 end
 
 function is_primitive(exp)
-    filter(x -> x[1] == exp, pre_def) != []
+    filter(x -> x[1] == exp.args[1], pre_def) != []
 end
 
 function apply_primitive(exp, p, q, env)
