@@ -19,14 +19,6 @@ function evaluate(exp, env)
         elseif (let_expr(exp))
             eval_let(exp, env)
 
-            
-        elseif is_primitive(exp) # In case its a simple expression like an addition
-            if (length(exp.args) == 3)
-                apply_primitive(exp, evaluate(exp.args[2], env), evaluate(exp.args[3], env), env)
-            elseif (length(exp.args) == 2)
-                apply_primitive_single(exp, evaluate(exp.args[2], env), env)
-            end
-
         elseif (is_call(exp))
             eval_call(exp, env)
         end

@@ -223,8 +223,17 @@ function_body(func) = func[2][2]
 function eval_call(exp, env)
     func = eval_name(call_operator(exp), env)
     args = eval_expr(call_operands(exp), env)
-    
-    extended_env = augment_environment(function_parameters(func), args, env)
-    evaluate(function_body(func), extended_env)
+
+    if (primitive_or_user_def(func, env))
+        if (length(args) == 1) 
+            apply_primitive_single(func, args)
+        else
+            apply_primitive(func, args)
+        end
+
+    else
+        extended_env = augment_environment(function_parameters(func), args, env)
+        evaluate(function_body(func), extended_env)
+    end
 end
 
