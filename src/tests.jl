@@ -86,11 +86,15 @@ end
 
 end
 
+@testset "ifs, elseif and else" begin
+    @test evaluate(Meta.parse("if 1 > 3 1 elseif 3 > 3 3 else 2 end"), initial) == 2
+    @test evaluate(Meta.parse("if 4 > 3 3 end"), initial) == 3
+    @test evaluate(Meta.parse("if 3 > 3 3 elseif 4 > 3 4 end"), initial) == 4
+    @test evaluate(Meta.parse("if 4 > 3 3 else 2 end"), initial) == 3
+    @test evaluate(Meta.parse("if 3 > 3 3 else 2 end"), initial) == 2
+    @test evaluate(Meta.parse("if 3 > 2 1 else 0 end"), initial) == 1
+    @test evaluate(Meta.parse("if 3 < 2 1 elseif 2 > 3 2 else 0 end"), initial) === 0
+
+end
+
 @test evaluate(Meta.parse("true"), initial) == true
-
-Meta.parse("let (+ , *) = (*, +) ; (1 * 2) + 3; end") == Meta.parse("let + = *, * = +; (1 * 2) + 3; end")
-
-
-Meta.parse("let (+ , *) = (*, +) ; (1 * 2) + 3; end")
-
-Meta.parse("let + = *, * = +; (1 * 2) + 3; end")

@@ -92,8 +92,12 @@ function is_true(exp, env)
 end
 
 function is_ternary(exp)
-    if (exp.args[1] == Expr || self_evaluating(exp.args[2])|| self_evaluating(exp.args[3]))
-        return true
+    if (length(exp.args) == 3)
+        if (exp.args[1] == Expr || self_evaluating(exp.args[2])|| self_evaluating(exp.args[3]))
+            return true
+        else
+            return false
+        end
     else
         return false
     end
@@ -107,12 +111,6 @@ function if_expr(exp)
     end
 end
 
-function eval_if(exp, env)
-    if (evaluate(exp.args[1], env))
-        return exp.args[2]
-    end
-    #TODO evaluate normal if conditions
-end
 
 function eval_let(exp, env)
     (flets, lets) = filter_flets(exp)
@@ -164,6 +162,24 @@ function eval_expr(expr, env)
         end
     end
     l
+end
+
+function eval_if(exp, env)
+    if (evaluate(exp.args[1], env))
+        return evaluate(exp.args[2].args[2], env)
+    elseif length(exp.args) > 2
+        eval_elseif(exp.args[3], env)
+    end
+end
+
+function eval_elseif(exp,env)
+    if exp.head == :block
+        return exp.args[2]
+    elseif (exp.head == :elseif && evaluate(exp.args[1].args[2], env))
+        return evaluate(exp.args[2].args[2], env)
+    else
+        return eval_elseif(exp.args[3], env)
+    end
 end
 
 
