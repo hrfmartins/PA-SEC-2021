@@ -174,7 +174,7 @@ end
 
 function eval_elseif(exp,env)
     if exp.head == :block
-        return exp.args[2]
+        return evaluate(exp.args[2], env)
     elseif (exp.head == :elseif && evaluate(exp.args[1].args[2], env))
         return evaluate(exp.args[2].args[2], env)
     else
@@ -253,3 +253,24 @@ function eval_call(exp, env)
     end
 end
 
+is_block(exp) = exp.head == :block ? true : false 
+
+function eval_block(exp, env)
+    if isa(exp.args[1], LineNumberNode)
+        eval_chain_block(removeLNN(exp.args[2:length(exp.args)]), env)
+    else
+        eval_chain_block(removeLNN(exp.args), env)
+    end
+end
+
+function eval_chain_block(blocks, env)
+    if (length(blocks) == 1)
+        return evaluate(blocks[1], env)
+    else
+        eval_chain_block(blocks[2:length(blocks)], env)
+    end
+end
+
+function removeLNN(blocks)
+    filter(x-> !isa(x, LineNumberNode),  blocks)
+end
