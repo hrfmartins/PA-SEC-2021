@@ -7,7 +7,6 @@ initial = vcat(initial_bindings(), primitive_functions())
 
 @testset "Simple operations tests" begin
     @test evaluate(Meta.parse("2 + 3"), initial) == 5
-
     @test evaluate(Meta.parse("2 - 3"), initial) == -1
     @test evaluate(Meta.parse("3 * 2"), initial) == 6
     @test evaluate(Meta.parse("6 / 2"), initial) == 3
@@ -31,6 +30,8 @@ end
     @test evaluate(Meta.parse("\"Hello World\""), initial) == "Hello World" # String
     @test evaluate(Meta.parse("1"), initial) == 1 
     @test evaluate(Meta.parse("true"), initial) == true
+    @test evaluate(Meta.parse("-6"), initial) == -6
+
 end
 
 @testset "Constants pi and e" begin
@@ -95,6 +96,20 @@ end
     @test evaluate(Meta.parse("if 3 > 2 1 else 0 end"), initial) == 1
     @test evaluate(Meta.parse("if 3 < 2 1 elseif 2 > 3 2 else 0 end"), initial) === 0
 
+    @test evaluate(Meta.parse("let abs(x) = if x > 1 x else -x end; abs(-1); end"), initial) == 1
+
+end
+
+@testset "Blocks with begin and (;;)" begin
+    @test evaluate(Meta.parse("begin 1+2; 2*3; 3/4 end"), initial) == 0.75
+    @test evaluate(Meta.parse("(1+2;1;2;3;4)"), initial) == 4
+    @test evaluate(Meta.parse("(1+2;1;2;3;)"), initial) == 3
+    @test evaluate(Meta.parse("(1;;;3;)"), initial) == 3
+    @test evaluate(Meta.parse("(1;;;true;)"), initial) == true
+    @test evaluate(Meta.parse("(1+2;;let y(x) = x; y(1); end;)"), initial) == 1
+    @test evaluate(Meta.parse("begin 1+2; 2*3; 3/4 end == 3/4"), initial) == true
+    @test evaluate(Meta.parse("begin 1+2; end"), initial) == 3
 end
 
 @test evaluate(Meta.parse("true"), initial) == true
+

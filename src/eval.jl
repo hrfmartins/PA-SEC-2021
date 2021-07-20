@@ -21,8 +21,13 @@ function evaluate(exp, env)
 
         elseif (is_call(exp))
             eval_call(exp, env)
-        end
     
+        elseif is_block(exp)
+            eval_block(exp, env)
+
+        end
+
+
     else
         error("Unknown ", exp, " Type")
     end
