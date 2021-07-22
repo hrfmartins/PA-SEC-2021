@@ -274,3 +274,43 @@ end
 function removeLNN(blocks)
     filter(x-> !isa(x, LineNumberNode),  blocks)
 end
+
+is_define(exp) = exp.head == :(=) && length(exp.args) == 2
+
+function def_name(exp)
+    if isa(exp.args[1], Symbol)
+        [exp.args[1]]
+    elseif isa(exp.args[1], Expr) && exp.args[1].head == :tuple
+        exp.args[1].args
+    elseif isa(exp.args[1], Expr) && exp.args[1].head == :call # function definition
+        exp.args[1].args[1]
+    end
+end
+
+function def_init(exp) 
+    if isa(exp.args[2], Expr) && exp.args[2].head == :tuple
+        exp.args[2].args
+    elseif isa(exp.args[2], Expr) && exp.args[2].head == :call # function definition
+        exp.args[2].args[2]
+    else
+        [exp.args[2]]
+    end
+end
+
+function eval_def(exp, env, define_name) 
+    value = [evaluate(x, env) for x in def_init(exp)]
+    if (define_name)
+        augment_destructively(def_name(exp), value, env)
+    else
+        augment_environment(def_name(exp), value, env)
+    end
+    length(value) == 1 ? value[1] : Tuple(value)
+end
+
+function augment_destructively(names, values, env)
+    if names == [] || values == []
+        env
+    else
+        pushfirst!(augment_destructively(names[2:length(names)], values[2:length(values)], env), (names[1], values[1]))
+    end 
+end

@@ -1,7 +1,7 @@
 include("utils.jl")
 include("predef.jl")
 
-function evaluate(exp, env)
+function evaluate(exp, env, define_name=true)
     if (self_evaluating(exp))
         return exp
 
@@ -21,6 +21,9 @@ function evaluate(exp, env)
 
         elseif (is_call(exp))
             eval_call(exp, env)
+
+        elseif (is_define(exp))
+            eval_def(exp, env, define_name)
     
         elseif is_block(exp)
             eval_block(exp, env)
