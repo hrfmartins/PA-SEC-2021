@@ -279,38 +279,53 @@ is_define(exp) = exp.head == :(=) && length(exp.args) == 2
 
 function def_name(exp)
     if isa(exp.args[1], Symbol)
-        [exp.args[1]]
-    elseif isa(exp.args[1], Expr) && exp.args[1].head == :tuple
-        exp.args[1].args
+        exp.args[1]
     elseif isa(exp.args[1], Expr) && exp.args[1].head == :call # function definition
         exp.args[1].args[1]
     end
 end
 
 function def_init(exp) 
-    if isa(exp.args[2], Expr) && exp.args[2].head == :tuple
-        exp.args[2].args
-    elseif isa(exp.args[2], Expr) && exp.args[2].head == :call # function definition
-        exp.args[2].args[2]
+    if isa(exp.args[2], Expr)
+        if (isa(exp.args[1], Symbol))
+            return (exp.args[2], false)
+        elseif (exp.args[1].head == :call) # function definition
+            return (exp.args[2].args[2], true)
+        end
     else
-        [exp.args[2]]
+        return (exp.args[2], false)
     end
 end
 
-function eval_def(exp, env, define_name) 
-    value = [evaluate(x, env) for x in def_init(exp)]
+function eval_def(exp, env, define_name)
+    value, f_or_v = def_init(exp) # function or value
+
     if (define_name)
-        augment_destructively(def_name(exp), value, env)
-    else
-        augment_environment(def_name(exp), value, env)
+        if (f_or_v) # if its a function
+            augment_destructively(def_name(exp), make_function(def_params(exp), def_body(exp)), env)
+            nothing
+        else
+            evaluated = evaluate(value, env)
+            augment_destructively(def_name(exp), evaluated, env)
+            evaluated
+        end
+    else        # will be useful in the evaluation of let forms
+        if (f_or_v)
+            augment_environment(def_name(exp), make_function(def_params(exp), def_body(exp)), env)
+            nothing
+        else
+            evaluated = evaluate(value, env)
+            augment_environment(def_name(exp), evaluated, env)
+            evaluated
+        end
+
     end
-    length(value) == 1 ? value[1] : Tuple(value)
 end
 
-function augment_destructively(names, values, env)
-    if names == [] || values == []
-        env
-    else
-        pushfirst!(augment_destructively(names[2:length(names)], values[2:length(values)], env), (names[1], values[1]))
-    end 
+function augment_destructively(name, value, env)
+    pushfirst!(env, (name, value))
 end
+
+def_params(exp) = exp.args[1].args[2:length(exp.args[1].args)]
+
+def_body(exp) = exp.args[2].args[2]

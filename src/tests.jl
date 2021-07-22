@@ -5,6 +5,12 @@ using Test
 
 initial = vcat(initial_bindings(), primitive_functions())
 
+initial
+evaluate(Meta.parse("x==3"), initial)
+
+evaluate(Meta.parse("x(1+2)"), initial)
+
+
 @testset "Simple operations tests" begin
     @test evaluate(Meta.parse("2 + 3"), initial) == 5
     @test evaluate(Meta.parse("2 - 3"), initial) == -1
@@ -109,6 +115,13 @@ end
     @test evaluate(Meta.parse("(1+2;;let y(x) = x; y(1); end;)"), initial) == 1
     @test evaluate(Meta.parse("begin 1+2; 2*3; 3/4 end == 3/4"), initial) == true
     @test evaluate(Meta.parse("begin 1+2; end"), initial) == 3
+end
+
+@testset "example defining variable x, and function triple" begin
+    evaluate(Meta.parse("x = 1+2"), initial)
+    evaluate(Meta.parse("x+2"), initial)
+    evaluate(Meta.parse("triple(a) = a + a + a"), initial)
+    evaluate(Meta.parse("triple(x+3)"), initial)
 end
 
 @test evaluate(Meta.parse("true"), initial) == true
