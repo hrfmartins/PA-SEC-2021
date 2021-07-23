@@ -15,13 +15,20 @@ function is_name(exp)
 end
 
 function eval_name(name, env)
+    function lookup_in_frame(frame)
+        if frame == []
+            eval_name(name, env[2:length(env)])
+        elseif (name == frame[1][1])
+            return frame[1][2]
+        else
+            lookup_in_frame(frame[2:length(frame)])
+        end
+    end
     if (env == []) # Reached the end and it wasnt there, it's unbound!
-        error(string("Unbound name", env, "EVAL-NAME"))
-    elseif (name == env[1][1])
-        return env[1][2]
-    else
-        eval_name(name, env[2:length(env)]) #recursively call with the rest of the list
+        error(string("Unbound name - ", name, " - EVAL-NAME"))
 
+    else
+        lookup_in_frame(env[1]) #recursively call with the rest of the list
     end
 end
 
@@ -122,8 +129,9 @@ end
 function filter_flets(exp)
     flets = []
     lets = []
-
-    if (typeof(exp.args[1].args[1]) == Symbol) # Single let x = 1; x + 1
+    if (exp.args[1].args == [])
+    
+    elseif (typeof(exp.args[1].args[1]) == Symbol) # Single let x = 1; x + 1
         push!(lets, exp.args[1])
 
     elseif (exp.args[1].args[1].head == :call)
@@ -141,12 +149,6 @@ function filter_flets(exp)
         end
     end
     return (flets, lets)
-end
-
-function eval_flet(exp, env)
-    extended_env = augment_environment(flet_func_names(exp), flet_functions(exp), env)
-    evaluate(flet_func_body(exp), extended_env)
-
 end
 
 function eval_expr(expr, env)
@@ -184,16 +186,13 @@ end
 
 
 function augment_environment(names, values, env)
-    if names == [] || values == []
-        env
-    else
-        newEnv = deepcopy(env)
-        pushfirst!(augment_environment(names[2:length(names)], values[2:length(values)], newEnv), (names[1], values[1]))
-    end
+    newEnv = deepcopy(env)
+    pushfirst!(newEnv, map((i, j) -> (i,j), names, values))
+        #pushfirst!(augment_environment(names[2:length(names)], values[2:length(values)], newEnv), (names[1], values[1]))
 end
 
 function empty_environment()
-    vcat(initial_bindings(), primitive_functions())
+    [vcat(initial_bindings(), primitive_functions())]
 end
 
 function is_call(expr)
@@ -323,7 +322,8 @@ function eval_def(exp, env, define_name)
 end
 
 function augment_destructively(name, value, env)
-    pushfirst!(env, (name, value))
+    binding = (name, value)
+    env[1] = vcat(binding, env[1])
 end
 
 def_params(exp) = exp.args[1].args[2:length(exp.args[1].args)]

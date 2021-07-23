@@ -3,7 +3,7 @@ using Base: Symbol
 include("eval.jl")
 using Test
 
-initial = vcat(initial_bindings(), primitive_functions())
+initial = empty_environment()
 
 @testset "Simple operations tests" begin
     @test evaluate(Meta.parse("2 + 3"), initial) == 5
@@ -127,6 +127,11 @@ end
     @test evaluate(Meta.parse("baz = 3"), initial) == 3
     @test evaluate(Meta.parse("let x = 0; baz = 5; end + baz"), initial) == 8
     @test evaluate(Meta.parse("let x = 0; baz = 6; end + baz"), initial) == 9
+end
+
+@testset "changing the value of a definition inside a scope (scope of the let form)" begin
+    @test evaluate(Meta.parse("baz = 3"), initial) == 3
+    @test evaluate(Meta.parse("let ; baz = 6; end + baz"), initial) == 9
 end
 
 @test evaluate(Meta.parse("true"), initial) == true
