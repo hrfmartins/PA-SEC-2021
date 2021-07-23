@@ -66,6 +66,7 @@ pre_def = [ make_primitive(+),
             make_primitive(!=),
             make_primitive(:%),
             make_primitive_single(!),
+            make_primitive_single(-),
             make_primitive(//)
 ]
 
@@ -81,6 +82,7 @@ pre_def_set = [ make_prim(+),
             make_prim(!=),
             make_prim(:%),
             make_prim_single(!),
+            make_prim_single(-),
             make_prim(//)
 ]
 

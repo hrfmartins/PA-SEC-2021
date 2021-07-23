@@ -3,11 +3,10 @@ using Base: Symbol
 include("eval.jl")
 using Test
 
-initial = vcat(initial_bindings(), primitive_functions())
+initial = empty_environment()
 
 @testset "Simple operations tests" begin
     @test evaluate(Meta.parse("2 + 3"), initial) == 5
-
     @test evaluate(Meta.parse("2 - 3"), initial) == -1
     @test evaluate(Meta.parse("3 * 2"), initial) == 6
     @test evaluate(Meta.parse("6 / 2"), initial) == 3
@@ -31,6 +30,8 @@ end
     @test evaluate(Meta.parse("\"Hello World\""), initial) == "Hello World" # String
     @test evaluate(Meta.parse("1"), initial) == 1 
     @test evaluate(Meta.parse("true"), initial) == true
+    @test evaluate(Meta.parse("-6"), initial) == -6
+
 end
 
 @testset "Constants pi and e" begin
@@ -86,11 +87,51 @@ end
 
 end
 
+@testset "ifs, elseif and else" begin
+    @test evaluate(Meta.parse("if 1 > 3 1 elseif 3 > 3 3 else 2 end"), initial) == 2
+    @test evaluate(Meta.parse("if 4 > 3 3 end"), initial) == 3
+    @test evaluate(Meta.parse("if 3 > 3 3 elseif 4 > 3 4 end"), initial) == 4
+    @test evaluate(Meta.parse("if 4 > 3 3 else 2 end"), initial) == 3
+    @test evaluate(Meta.parse("if 3 > 3 3 else 2 end"), initial) == 2
+    @test evaluate(Meta.parse("if 3 > 2 1 else 0 end"), initial) == 1
+    @test evaluate(Meta.parse("if 3 < 2 1 elseif 2 > 3 2 else 0 end"), initial) === 0
+
+    @test evaluate(Meta.parse("let abs(x) = if x > 1 x else -x end; abs(-1); end"), initial) == 1
+
+end
+
+@testset "Blocks with begin and (;;)" begin
+    @test evaluate(Meta.parse("begin 1+2; 2*3; 3/4 end"), initial) == 0.75
+    @test evaluate(Meta.parse("(1+2;1;2;3;4)"), initial) == 4
+    @test evaluate(Meta.parse("(1+2;1;2;3;)"), initial) == 3
+    @test evaluate(Meta.parse("(1;;;3;)"), initial) == 3
+    @test evaluate(Meta.parse("(1;;;true;)"), initial) == true
+    @test evaluate(Meta.parse("(1+2;;let y(x) = x; y(1); end;)"), initial) == 1
+    @test evaluate(Meta.parse("begin 1+2; 2*3; 3/4 end == 3/4"), initial) == true
+    @test evaluate(Meta.parse("begin 1+2; end"), initial) == 3
+end
+
+@testset "example defining variable x, and function triple" begin
+    @test evaluate(Meta.parse("x = 1+2"), initial) == 3
+    @test evaluate(Meta.parse("x+2"), initial) == 5
+    @test evaluate(Meta.parse("triple(a) = a + a + a"), initial) === nothing
+    @test evaluate(Meta.parse("triple(x+3)"), initial) == 18
+end
+
+@testset "function foo definition" begin
+    @test evaluate(Meta.parse("function foo(x); x+1; end"), initial) === nothing
+    @test evaluate(Meta.parse("foo(1)"), initial) == 2
+end
+
+@testset "function foo definition" begin
+    @test evaluate(Meta.parse("baz = 3"), initial) == 3
+    @test evaluate(Meta.parse("let x = 0; baz = 5; end + baz"), initial) == 8
+    @test evaluate(Meta.parse("let x = 0; baz = 6; end + baz"), initial) == 9
+end
+
+@testset "changing the value of a definition inside a scope (scope of the let form)" begin
+    @test evaluate(Meta.parse("baz = 3"), initial) == 3
+    @test evaluate(Meta.parse("let ; baz = 6; end + baz"), initial) == 9
+end
+
 @test evaluate(Meta.parse("true"), initial) == true
-
-Meta.parse("let (+ , *) = (*, +) ; (1 * 2) + 3; end") == Meta.parse("let + = *, * = +; (1 * 2) + 3; end")
-
-
-Meta.parse("let (+ , *) = (*, +) ; (1 * 2) + 3; end")
-
-Meta.parse("let + = *, * = +; (1 * 2) + 3; end")

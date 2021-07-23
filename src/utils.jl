@@ -15,13 +15,20 @@ function is_name(exp)
 end
 
 function eval_name(name, env)
+    function lookup_in_frame(frame)
+        if frame == []
+            eval_name(name, env[2:length(env)])
+        elseif (name == frame[1][1])
+            return frame[1][2]
+        else
+            lookup_in_frame(frame[2:length(frame)])
+        end
+    end
     if (env == []) # Reached the end and it wasnt there, it's unbound!
-        error(string("Unbound name", env, "EVAL-NAME"))
-    elseif (name == env[1][1])
-        return env[1][2]
-    else
-        eval_name(name, env[2:length(env)]) #recursively call with the rest of the list
+        error(string("Unbound name - ", name, " - EVAL-NAME"))
 
+    else
+        lookup_in_frame(env[1]) #recursively call with the rest of the list
     end
 end
 
@@ -92,8 +99,12 @@ function is_true(exp, env)
 end
 
 function is_ternary(exp)
-    if (exp.args[1] == Expr || self_evaluating(exp.args[2])|| self_evaluating(exp.args[3]))
-        return true
+    if (length(exp.args) == 3)
+        if (exp.args[1] == Expr || self_evaluating(exp.args[2])|| self_evaluating(exp.args[3]))
+            return true
+        else
+            return false
+        end
     else
         return false
     end
@@ -107,12 +118,6 @@ function if_expr(exp)
     end
 end
 
-function eval_if(exp, env)
-    if (evaluate(exp.args[1], env))
-        return exp.args[2]
-    end
-    #TODO evaluate normal if conditions
-end
 
 function eval_let(exp, env)
     (flets, lets) = filter_flets(exp)
@@ -124,8 +129,9 @@ end
 function filter_flets(exp)
     flets = []
     lets = []
-
-    if (typeof(exp.args[1].args[1]) == Symbol) # Single let x = 1; x + 1
+    if (exp.args[1].args == [])
+    
+    elseif (typeof(exp.args[1].args[1]) == Symbol) # Single let x = 1; x + 1
         push!(lets, exp.args[1])
 
     elseif (exp.args[1].args[1].head == :call)
@@ -145,12 +151,6 @@ function filter_flets(exp)
     return (flets, lets)
 end
 
-function eval_flet(exp, env)
-    extended_env = augment_environment(flet_func_names(exp), flet_functions(exp), env)
-    evaluate(flet_func_body(exp), extended_env)
-
-end
-
 function eval_expr(expr, env)
     l = []
     if (expr == [])
@@ -166,18 +166,33 @@ function eval_expr(expr, env)
     l
 end
 
-
-function augment_environment(names, values, env)
-    if names == [] || values == []
-        env
-    else
-        newEnv = deepcopy(env)
-        pushfirst!(augment_environment(names[2:length(names)], values[2:length(values)], newEnv), (names[1], values[1]))
+function eval_if(exp, env)
+    if (evaluate(exp.args[1], env))
+        return evaluate(exp.args[2].args[2], env)
+    elseif length(exp.args) > 2
+        eval_elseif(exp.args[3], env)
     end
 end
 
+function eval_elseif(exp,env)
+    if exp.head == :block
+        return evaluate(exp.args[2], env)
+    elseif (exp.head == :elseif && evaluate(exp.args[1].args[2], env))
+        return evaluate(exp.args[2].args[2], env)
+    else
+        return eval_elseif(exp.args[3], env)
+    end
+end
+
+
+function augment_environment(names, values, env)
+    newEnv = deepcopy(env)
+    pushfirst!(newEnv, map((i, j) -> (i,j), names, values))
+        #pushfirst!(augment_environment(names[2:length(names)], values[2:length(values)], newEnv), (names[1], values[1]))
+end
+
 function empty_environment()
-    vcat(initial_bindings(), primitive_functions())
+    [vcat(initial_bindings(), primitive_functions())]
 end
 
 function is_call(expr)
@@ -237,3 +252,86 @@ function eval_call(exp, env)
     end
 end
 
+is_block(exp) = exp.head == :block ? true : false 
+
+function eval_block(exp, env)
+    if isa(exp.args[1], LineNumberNode)
+        eval_chain_block(removeLNN(exp.args[2:length(exp.args)]), env)
+    else
+        eval_chain_block(removeLNN(exp.args), env)
+    end
+end
+
+function eval_chain_block(blocks, env)
+    if (length(blocks) == 1)
+        return evaluate(blocks[1], env)
+    else
+        eval_chain_block(blocks[2:length(blocks)], env)
+    end
+end
+
+function removeLNN(blocks)
+    filter(x-> !isa(x, LineNumberNode),  blocks)
+end
+
+is_define(exp) = exp.head == :(=) && length(exp.args) == 2
+
+function def_name(exp)
+    if isa(exp.args[1], Symbol)
+        exp.args[1]
+    elseif isa(exp.args[1], Expr) && exp.args[1].head == :call # function definition
+        exp.args[1].args[1]
+    end
+end
+
+function def_init(exp) 
+    if isa(exp.args[2], Expr)
+        if (isa(exp.args[1], Symbol))
+            return (exp.args[2], false)
+        elseif (exp.args[1].head == :call) # function definition
+            return (exp.args[2].args[2], true)
+        end
+    else
+        return (exp.args[2], false)
+    end
+end
+
+function eval_def(exp, env, define_name)
+    value, f_or_v = def_init(exp) # function or value
+
+    if (define_name)
+        if (f_or_v) # if its a function
+            augment_destructively(def_name(exp), make_function(def_params(exp), def_body(exp)), env)
+            nothing
+        else
+            evaluated = evaluate(value, env)
+            augment_destructively(def_name(exp), evaluated, env)
+            evaluated
+        end
+    else        # will be useful in the evaluation of let forms
+        if (f_or_v)
+            augment_environment(def_name(exp), make_function(def_params(exp), def_body(exp)), env)
+            nothing
+        else
+            evaluated = evaluate(value, env)
+            augment_environment(def_name(exp), evaluated, env)
+            evaluated
+        end
+
+    end
+end
+
+function augment_destructively(name, value, env)
+    binding = (name, value)
+    env[1] = vcat(binding, env[1])
+end
+
+def_params(exp) = exp.args[1].args[2:length(exp.args[1].args)]
+
+def_body(exp) = exp.args[2].args[2]
+
+is_function_def(exp) = exp.head == :function ? true : false 
+
+eval_func_def(exp, env) = (augment_destructively(def_name(exp), make_function(def_params(exp), funct_body(exp)), env); return nothing)
+
+funct_body(exp) = exp.args[2].args[3]
