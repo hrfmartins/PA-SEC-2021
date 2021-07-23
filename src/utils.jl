@@ -329,3 +329,9 @@ end
 def_params(exp) = exp.args[1].args[2:length(exp.args[1].args)]
 
 def_body(exp) = exp.args[2].args[2]
+
+is_function_def(exp) = exp.head == :function ? true : false 
+
+eval_func_def(exp, env) = (augment_destructively(def_name(exp), make_function(def_params(exp), funct_body(exp)), env); return nothing)
+
+funct_body(exp) = exp.args[2].args[3]

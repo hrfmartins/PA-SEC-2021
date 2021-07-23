@@ -5,12 +5,6 @@ using Test
 
 initial = vcat(initial_bindings(), primitive_functions())
 
-initial
-evaluate(Meta.parse("x==3"), initial)
-
-evaluate(Meta.parse("x(1+2)"), initial)
-
-
 @testset "Simple operations tests" begin
     @test evaluate(Meta.parse("2 + 3"), initial) == 5
     @test evaluate(Meta.parse("2 - 3"), initial) == -1
@@ -118,11 +112,21 @@ end
 end
 
 @testset "example defining variable x, and function triple" begin
-    evaluate(Meta.parse("x = 1+2"), initial)
-    evaluate(Meta.parse("x+2"), initial)
-    evaluate(Meta.parse("triple(a) = a + a + a"), initial)
-    evaluate(Meta.parse("triple(x+3)"), initial)
+    @test evaluate(Meta.parse("x = 1+2"), initial) == 3
+    @test evaluate(Meta.parse("x+2"), initial) == 5
+    @test evaluate(Meta.parse("triple(a) = a + a + a"), initial) === nothing
+    @test evaluate(Meta.parse("triple(x+3)"), initial) == 18
+end
+
+@testset "function foo definition" begin
+    @test evaluate(Meta.parse("function foo(x); x+1; end"), initial) === nothing
+    @test evaluate(Meta.parse("foo(1)"), initial) == 2
+end
+
+@testset "function foo definition" begin
+    @test evaluate(Meta.parse("baz = 3"), initial) == 3
+    @test evaluate(Meta.parse("let x = 0; baz = 5; end + baz"), initial) == 8
+    @test evaluate(Meta.parse("let x = 0; baz = 6; end + baz"), initial) == 9
 end
 
 @test evaluate(Meta.parse("true"), initial) == true
-

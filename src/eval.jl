@@ -27,7 +27,9 @@ function evaluate(exp, env, define_name=true)
     
         elseif is_block(exp)
             eval_block(exp, env)
-
+            
+        elseif is_function_def(exp)
+            eval_func_def(exp, env)
         end
 
 
