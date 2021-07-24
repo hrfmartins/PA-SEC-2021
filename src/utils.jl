@@ -266,6 +266,7 @@ function eval_chain_block(blocks, env)
     if (length(blocks) == 1)
         return evaluate(blocks[1], env)
     else
+        evaluate(blocks[1], env)
         eval_chain_block(blocks[2:length(blocks)], env)
     end
 end

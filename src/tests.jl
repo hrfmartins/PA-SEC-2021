@@ -134,4 +134,11 @@ end
     @test evaluate(Meta.parse("let ; baz = 6; end + baz"), initial) == 9
 end
 
+@testset "defining vars inside the blocks" begin
+    @test evaluate(Meta.parse("(x=1;y=2;;3;)"), initial) == 3
+    @test evaluate(Meta.parse("x"), initial) == 1    
+    @test evaluate(Meta.parse("y"), initial) == 2
+    @test evaluate(Meta.parse("(x=1;y=2;;3;) == x + y"), initial) == true
+end
+
 @test evaluate(Meta.parse("true"), initial) == true
