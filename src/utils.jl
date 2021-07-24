@@ -121,9 +121,14 @@ end
 
 function eval_let(exp, env)
     (flets, lets) = filter_flets(exp)
-    extended_environment = augment_environment(let_names(lets), eval_expr(let_inits(lets), env), env)
-    extended_environment = augment_environment(flet_func_names(flets), flet_functions(flets), extended_environment)
-    evaluate(flet_func_body(exp), extended_environment)
+    
+    names = vcat(let_names(lets), flet_func_names(flets))
+    inits = vcat(eval_expr(let_inits(lets), env), flet_functions(flets))
+
+    extended_environment = augment_environment(names, inits, env)
+    evaluated = evaluate(flet_func_body(exp), extended_environment)
+    deleteat!(env, 1)
+    evaluated
 end
 
 function filter_flets(exp)
@@ -186,9 +191,8 @@ end
 
 
 function augment_environment(names, values, env)
-    newEnv = deepcopy(env)
-    pushfirst!(newEnv, map((i, j) -> (i,j), names, values))
-        #pushfirst!(augment_environment(names[2:length(names)], values[2:length(values)], newEnv), (names[1], values[1]))
+    #newEnv = deepcopy(env)
+    pushfirst!(env, map((i, j) -> (i,j), names, values))
 end
 
 function empty_environment()
@@ -214,9 +218,19 @@ flet_body(expr) = expr.args[2]
 
 flet_params(expr) = expr.args[1].args[2:length(expr.args[1].args)]
 
+function local_or_global(x)
+    if x.head == :global
+        :global
+    else
+        :local 
+    end
+end
+
 function flet_functions(expr)
+    # TODO implement definition of global and not
     [make_function(flet_params(x), flet_func_body(x)) for x in expr]
 end
+
 
 function make_function(params, body)
     return (:function, (params, body))
@@ -248,7 +262,10 @@ function eval_call(exp, env)
 
     else
         extended_env = augment_environment(function_parameters(func), args, env)
-        evaluate(function_body(func), extended_env)
+        evaluated = evaluate(function_body(func), extended_env)
+        deleteat!(env, 1)
+        evaluated
+
     end
 end
 
@@ -275,7 +292,7 @@ function removeLNN(blocks)
     filter(x-> !isa(x, LineNumberNode),  blocks)
 end
 
-is_define(exp) = exp.head == :(=) && length(exp.args) == 2
+is_define(exp) = (exp.head == :(=) && length(exp.args)) == 2 || ((exp.head == :global && exp.args[1].head == :(=) && length(exp.args[1].args) == 2))
 
 function def_name(exp)
     if isa(exp.args[1], Symbol)
@@ -298,15 +315,30 @@ function def_init(exp)
 end
 
 function eval_def(exp, env, define_name)
-    value, f_or_v = def_init(exp) # function or value
+    if (exp.head == :global)
+        value, f_or_v = def_init(exp.args[1]) # function or value
+    else
+        value, f_or_v = def_init(exp)
+    end
 
     if (define_name)
         if (f_or_v) # if its a function
-            augment_destructively(def_name(exp), make_function(def_params(exp), def_body(exp)), env)
+            name = :placeholder
+            body = :placeholder
+            if (exp.head == :global)
+                name = def_name(exp.args[1])
+                body = evaluate(def_body(exp.args[1]), env, true)   #FIXME If we are inside an inner scope and we define a global, we need to push the thing we're evaluating to the global scope!
+                params = def_params(exp.args[1])
+            else
+                name = def_name(exp)
+                body = def_body(exp)
+                params = def_params(exp)
+            end
+            augment_destructively(name, make_function(params, body), exp, env)
             nothing
         else
             evaluated = evaluate(value, env)
-            augment_destructively(def_name(exp), evaluated, env)
+            augment_destructively(def_name(exp), evaluated, exp, env)
             evaluated
         end
     else        # will be useful in the evaluation of let forms
@@ -322,9 +354,14 @@ function eval_def(exp, env, define_name)
     end
 end
 
-function augment_destructively(name, value, env)
-    binding = (name, value)
-    env[1] = vcat(binding, env[1])
+function augment_destructively(name, value, exp, env)
+    if exp.head == :global # global binding
+        binding = (name, value)
+        env[length(env)] = vcat(binding, env[length(env)])
+    else   # local binding
+        binding = (name, value)
+        env[1] = vcat(binding, env[1])
+    end
 end
 
 def_params(exp) = exp.args[1].args[2:length(exp.args[1].args)]
@@ -333,6 +370,13 @@ def_body(exp) = exp.args[2].args[2]
 
 is_function_def(exp) = exp.head == :function ? true : false 
 
-eval_func_def(exp, env) = (augment_destructively(def_name(exp), make_function(def_params(exp), funct_body(exp)), env); return nothing)
+eval_func_def(exp, env) = (augment_destructively(def_name(exp), make_function(def_params(exp), funct_body(exp)), exp, env); return nothing)
 
 funct_body(exp) = exp.args[2].args[3]
+
+function is_global(exp)
+    if (isa(exp, Symbol))
+        return false
+    end
+    exp.head == :global ? true : false
+end

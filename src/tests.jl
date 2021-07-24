@@ -5,6 +5,10 @@ using Test
 
 initial = empty_environment()
 
+@test evaluate(Meta.parse("(x=1;;;3;)"), initial) == 3
+initial
+@test evaluate(Meta.parse("x"), initial) == 1
+
 @testset "Simple operations tests" begin
     @test evaluate(Meta.parse("2 + 3"), initial) == 5
     @test evaluate(Meta.parse("2 - 3"), initial) == -1
@@ -123,7 +127,7 @@ end
     @test evaluate(Meta.parse("foo(1)"), initial) == 2
 end
 
-@testset "function foo definition" begin
+@testset "changin baz inside the frame in the local scope" begin
     @test evaluate(Meta.parse("baz = 3"), initial) == 3
     @test evaluate(Meta.parse("let x = 0; baz = 5; end + baz"), initial) == 8
     @test evaluate(Meta.parse("let x = 0; baz = 6; end + baz"), initial) == 9
@@ -132,6 +136,25 @@ end
 @testset "changing the value of a definition inside a scope (scope of the let form)" begin
     @test evaluate(Meta.parse("baz = 3"), initial) == 3
     @test evaluate(Meta.parse("let ; baz = 6; end + baz"), initial) == 9
+end
+
+@testset "defining a global inside a let form" begin
+    @test evaluate(Meta.parse("let x = 1; global inc() = x; end"), initial) === nothing
+    @test evaluate(Meta.parse("inc()"), initial) == 1
+
+end
+
+@testset "accessing a global variable without global giving an error, unlike the Python behavior" begin
+    @test evaluate(Meta.parse("counter = 0"), initial) == 0
+    @test evaluate(Meta.parse("incr() = counter = counter + 1"), initial) === nothing
+    @test evaluate(Meta.parse("incr()"), initial) == 1
+end
+
+@testset "accessing a global variable without global giving an error, like the Python inherited behavior" begin
+    @test evaluate(Meta.parse("counter = 0"), initial) == 0
+    @test evaluate(Meta.parse("global incr() = counter = counter + 1"), initial) === nothing
+    @test evaluate(Meta.parse("incr()"), initial) == 1
+    @test evaluate(Meta.parse("incr()"), initial) == 2
 end
 
 @testset "defining vars inside the blocks" begin

@@ -1,8 +1,8 @@
 include("utils.jl")
 include("predef.jl")
 
-function evaluate(exp, env, define_name=true)
-    if (self_evaluating(exp))
+function evaluate(exp, env, glob = false, define_name=true)
+        if (self_evaluating(exp))
         return exp
 
     elseif (is_name(exp))
