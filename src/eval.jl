@@ -2,7 +2,8 @@ include("utils.jl")
 include("predef.jl")
 
 function evaluate(exp, env, glob = false, define_name=true)
-        if (self_evaluating(exp))
+    exp = Base.remove_linenums!(exp)
+    if (self_evaluating(exp))
         return exp
 
     elseif (is_name(exp))

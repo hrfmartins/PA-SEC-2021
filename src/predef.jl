@@ -8,6 +8,11 @@ function make_prim(exp)
     return (:function, ([:x, :y], expr))
 end
 
+function make_prim_no_args(exp)
+    expr = Expr(:call, exp)
+    return (:function, ([], expr))
+end
+
 function make_prim_single(exp)
     expr = Expr(:call, exp, :x)
     return (:function, ([:x], expr))
@@ -16,6 +21,12 @@ end
 function make_primitive_single(exp)
     expr = Expr(:call, exp, :x)
     return (Symbol(exp), (:function, ([:x], expr)))
+
+end
+
+function make_primitive_indiv(exp)
+    expr = Expr(:call, exp)
+    return (Symbol(exp), (:function, ([], expr)))
 
 end
 
@@ -67,7 +78,11 @@ pre_def = [ make_primitive(+),
             make_primitive(:%),
             make_primitive_single(!),
             make_primitive_single(-),
-            make_primitive(//)
+            make_primitive(//),
+            make_primitive_single(println),
+            make_primitive_single(readline),
+            make_primitive_indiv(exit)
+
 ]
 
 pre_def_set = [ make_prim(+),
@@ -83,7 +98,12 @@ pre_def_set = [ make_prim(+),
             make_prim(:%),
             make_prim_single(!),
             make_prim_single(-),
-            make_prim(//)
+            make_prim(//),
+            make_prim_single(println),
+            make_prim_single(readline),
+            make_prim_no_args(exit)
+
+            
 ]
 
 const_bindings = [(:pi, 3.14159),  (:e, 2.71828)]

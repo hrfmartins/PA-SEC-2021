@@ -173,7 +173,7 @@ end
 
 function eval_if(exp, env)
     if (evaluate(exp.args[1], env))
-        return evaluate(exp.args[2].args[2], env)
+        return evaluate(exp.args[2].args[1], env)
     elseif length(exp.args) > 2
         eval_elseif(exp.args[3], env)
     end
@@ -181,9 +181,9 @@ end
 
 function eval_elseif(exp,env)
     if exp.head == :block
-        return evaluate(exp.args[2], env)
-    elseif (exp.head == :elseif && evaluate(exp.args[1].args[2], env))
-        return evaluate(exp.args[2].args[2], env)
+        return evaluate(exp.args[1], env)
+    elseif (exp.head == :elseif && evaluate(exp.args[1].args[1], env))
+        return evaluate(exp.args[2].args[1], env)
     else
         return eval_elseif(exp.args[3], env)
     end
@@ -212,7 +212,7 @@ call_operands(expr) = expr.args[2:length(expr.args)]
 
 flet_func_names(expr) = [x.args[1].args[1] for x in expr]
 
-flet_func_body(expr) = expr.args[2].args[2]
+flet_func_body(expr) = expr.args[2].args[1]
 
 flet_body(expr) = expr.args[2]
 
@@ -307,7 +307,7 @@ function def_init(exp)
         if (isa(exp.args[1], Symbol))
             return (exp.args[2], false)
         elseif (exp.args[1].head == :call) # function definition
-            return (exp.args[2].args[2], true)
+            return (exp.args[2].args[1], true)
         end
     else
         return (exp.args[2], false)
@@ -366,13 +366,13 @@ end
 
 def_params(exp) = exp.args[1].args[2:length(exp.args[1].args)]
 
-def_body(exp) = exp.args[2].args[2]
+def_body(exp) = exp.args[2].args[1]
 
 is_function_def(exp) = exp.head == :function ? true : false 
 
 eval_func_def(exp, env) = (augment_destructively(def_name(exp), make_function(def_params(exp), funct_body(exp)), exp, env); return nothing)
 
-funct_body(exp) = exp.args[2].args[3]
+funct_body(exp) = exp.args[2].args[1]
 
 function is_global(exp)
     if (isa(exp, Symbol))
