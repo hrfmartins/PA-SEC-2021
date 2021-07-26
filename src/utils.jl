@@ -120,40 +120,69 @@ end
 
 
 function eval_let(exp, env)
-    (flets, lets) = filter_flets(exp)
-    
-    names = vcat(let_names(lets), flet_func_names(flets))
-    inits = vcat(eval_expr(let_inits(lets), env), flet_functions(flets))
+    ## (flets, lets) = filter_flets(exp)
+    ## 
+    ## names = vcat(let_names(lets), flet_func_names(flets))
+    ## inits = vcat(eval_expr(let_inits(lets), env), flet_functions(flets))
 
-    extended_environment = augment_environment(names, inits, env)
-    evaluated = evaluate(flet_func_body(exp), extended_environment)
+    ## extended_environment = augment_environment(names, inits, env)
+    pushfirst!(env, []) # a new frame for scope of the let form
+    expr = make_let_block(exp)
+    evaluated = evaluate(expr, env)
     deleteat!(env, 1)
     evaluated
 end
 
-function filter_flets(exp)
-    flets = []
-    lets = []
+## function filter_flets(exp)
+##     flets = []
+##     lets = []
+##     if (exp.args[1].args == [])
+##     
+##     elseif (typeof(exp.args[1].args[1]) == Symbol) # Single let x = 1; x + 1
+##         push!(lets, exp.args[1])
+## 
+##     elseif (exp.args[1].args[1].head == :call)
+##         push!(flets, exp.args[1])
+##         
+##     elseif (isa(exp.args[1].args[1], Expr))
+##         for e in exp.args[1].args
+##             if (e.head == :call)
+##                 continue
+##             elseif (typeof(e.args[1]) == Symbol)
+##                 push!(lets, e)
+##             elseif (isa(e.args[1], Expr))
+##                 push!(flets, e)
+##             end
+##         end
+##     end
+##     return (flets, lets)
+## end
+
+function make_let_block(exp)
+    q = string("begin ")
+
     if (exp.args[1].args == [])
     
     elseif (typeof(exp.args[1].args[1]) == Symbol) # Single let x = 1; x + 1
-        push!(lets, exp.args[1])
+        q = string(q, " ", exp.args[1],";")
 
     elseif (exp.args[1].args[1].head == :call)
-        push!(flets, exp.args[1])
+        q = string(q, " ", exp.args[1],";")
         
     elseif (isa(exp.args[1].args[1], Expr))
         for e in exp.args[1].args
             if (e.head == :call)
                 continue
             elseif (typeof(e.args[1]) == Symbol)
-                push!(lets, e)
+                q = string(q, " ", e,";")
             elseif (isa(e.args[1], Expr))
-                push!(flets, e)
+                q = string(q, " ", e,";")
+
             end
         end
     end
-    return (flets, lets)
+    q = string(q, exp.args[2].args[1], ";")
+    return Meta.parse(string(q, " end"))
 end
 
 function eval_expr(expr, env)
@@ -227,7 +256,6 @@ function local_or_global(x)
 end
 
 function flet_functions(expr)
-    # TODO implement definition of global and not
     [make_function(flet_params(x), flet_func_body(x)) for x in expr]
 end
 
@@ -327,7 +355,7 @@ function eval_def(exp, env, define_name)
             body = :placeholder
             if (exp.head == :global)
                 name = def_name(exp.args[1])
-                body = evaluate(def_body(exp.args[1]), env, true)   #FIXME If we are inside an inner scope and we define a global, we need to push the thing we're evaluating to the global scope!
+                body = def_body(exp.args[1])   #FIXME If we are inside an inner scope and we define a global, we need to push the thing we're evaluating to the global scope!
                 params = def_params(exp.args[1])
             else
                 name = def_name(exp)
@@ -372,14 +400,14 @@ is_function_def(exp) = exp.head == :function ? true : false
 
 eval_func_def(exp, env) = (augment_destructively(def_name(exp), make_function(def_params(exp), make_block(funct_body(exp))), exp, env); return nothing)
 
-funct_body(exp) = exp.args[2].args[1].args
+funct_body(exp) = exp.args[2].args
 
 function make_block(args)
     q = string("begin")
     for exp in args
         q = string(q, " ", exp,";")
     end
-    Meta.parse(string(q, " end"))
+    Base.remove_linenums!(Meta.parse(string(q, " end")))
 
 end
 

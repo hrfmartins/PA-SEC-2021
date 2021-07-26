@@ -93,8 +93,6 @@ end
     @test evaluate(Meta.parse("let + = 10; *(+,+); end"), initial) == (let + = 10; *(+,+); end) # Redefining + as an integer and using *
     @test evaluate(Meta.parse("let x = 1, +(x,y) = x*y; +(10, 10); end"), initial) == (let x = 1, +(x,y) = x*y; +(10, 10); end)
     @test evaluate(Meta.parse("let + = *, * = +; (1 * 2) + 3; end"), initial) == (let + = *, * = +; (1 * 2) + 3; end)  #FIXME implementar sequential reading
-    @test evaluate(Meta.parse("let (+ , *) = (*, +) ; (1 * 2) + 3; end"), initial) == (let (+ , *) = (*, +) ; (1 * 2) + 3; end)
-
 end
 
 @testset "ifs, elseif and else" begin
@@ -144,7 +142,8 @@ end
     @test evaluate(Meta.parse("let ; baz = 6; end + baz"), initial) == 9
 end
 
-@testset "defining a global inside a let form" begin
+@testset "defining a global inside a let form" begin # FIXME fix global forms
+    initial = empty_environment()
     @test evaluate(Meta.parse("let x = 1; global inc() = x; end"), initial) === nothing
     @test evaluate(Meta.parse("inc()"), initial) == 1
 
@@ -160,7 +159,7 @@ end
     @test evaluate(Meta.parse("counter = 0"), initial) == 0
     @test evaluate(Meta.parse("global incr() = counter = counter + 1"), initial) === nothing
     @test evaluate(Meta.parse("incr()"), initial) == 1
-    @test evaluate(Meta.parse("incr()"), initial) == 2 # FIXME
+    @test evaluate(Meta.parse("incr()"), initial) == 2 # FIXME global form
 end
 
 @testset "defining vars inside the blocks" begin
