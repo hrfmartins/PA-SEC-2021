@@ -307,7 +307,7 @@ function def_init(exp)
         if (isa(exp.args[1], Symbol))
             return (exp.args[2], false)
         elseif (exp.args[1].head == :call) # function definition
-            return (exp.args[2].args[1], true)
+            return (exp.args[2], true)
         end
     else
         return (exp.args[2], false)
@@ -366,13 +366,22 @@ end
 
 def_params(exp) = exp.args[1].args[2:length(exp.args[1].args)]
 
-def_body(exp) = exp.args[2].args[1]
+def_body(exp) = exp.args[2]
 
 is_function_def(exp) = exp.head == :function ? true : false 
 
-eval_func_def(exp, env) = (augment_destructively(def_name(exp), make_function(def_params(exp), funct_body(exp)), exp, env); return nothing)
+eval_func_def(exp, env) = (augment_destructively(def_name(exp), make_function(def_params(exp), make_block(funct_body(exp))), exp, env); return nothing)
 
-funct_body(exp) = exp.args[2].args[1]
+funct_body(exp) = exp.args[2].args[1].args
+
+function make_block(args)
+    q = string("begin")
+    for exp in args
+        q = string(q, " ", exp,";")
+    end
+    Meta.parse(string(q, " end"))
+
+end
 
 function is_global(exp)
     if (isa(exp, Symbol))
