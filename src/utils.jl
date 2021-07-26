@@ -281,7 +281,7 @@ function_parameters(func) = func[2][1]
 function_body(func) = func[2][2]
 
 function eval_call(exp, env)
-    func = eval_name(call_operator(exp), env)
+    func = evaluate(call_operator(exp), env)
     args = eval_expr(call_operands(exp), env)
 
     if (primitive_or_user_def(func, env))
@@ -299,6 +299,15 @@ function eval_call(exp, env)
 
     end
 end
+
+is_lambda(exp) = exp.head == :(->)
+
+lambda_parameters(exp) = isa(exp.args[1], Symbol) ? [exp.args[1]] : exp.args[1].args
+
+lambda_body(exp) = exp.args[2]
+
+eval_lambda(exp, env) = return make_function(lambda_parameters(exp), lambda_body(exp))
+
 
 is_block(exp) = exp.head == :block ? true : false 
 
@@ -445,6 +454,10 @@ function is_global(exp)
     end
     exp.head == :global ? true : false
 end
+
+is_and(exp) = exp.head == :&& ? true : false
+
+is_or(exp) = exp.head == :|| ? true : false
 
 function eval_and(exp, env) 
     evaluate(exp.args[1], env) && evaluate(exp.args[2], env)

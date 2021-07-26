@@ -37,7 +37,9 @@ function evaluate(exp, env, glob = false, define_name=true)
 
         elseif is_or(exp)
             eval_or(exp, env)
-
+            
+        elseif (is_lambda(exp))
+            eval_lambda(exp, env)
 
         end
 
