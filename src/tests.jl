@@ -3,7 +3,56 @@ using Base: Symbol
 include("eval.jl")
 using Test
 
+
 initial = empty_environment()
+@test evaluate(Meta.parse("(x -> x + 1)(2)"), initial) === 3
+
+@test evaluate(Meta.parse("((x, y, z) -> x + y + z)(2, 2, 4)"), initial) === 8
+@test evaluate(Meta.parse("(x -> x + 1)(2)"), initial) === 3
+@test evaluate(Meta.parse("(() -> 5)()"), initial) === 5
+@test evaluate(Meta.parse("((x, y) -> x + y)(1, 2)"), initial) === 3
+@test evaluate(Meta.parse("menos(x, y) = x - y"), initial) === nothing
+@test evaluate(Meta.parse("next(i) = (if i < 0 (x->x-x) else (x->x+x) end)( i, 1)"), initial) === nothing
+@test evaluate(Meta.parse("next(1)"), initial) === 2
+
+Meta.parse("((x, y, z) -> x + 1)")
+initial
+
+
+# @test evaluate(Meta.parse("deposit(q) = global balance = balance + q"), initial) === nothing
+# @test evaluate(Meta.parse("withdraw(q) = global balance = balance - q"), initial) === nothing
+# @test evaluate(Meta.parse("deposit(200)"), initial) === 200
+# @test evaluate(Meta.parse("withdraw(50)"), initial) === 150
+# @test evaluate(Meta.parse("deposit_and_withdraw(deposited, withdrawed) = (deposit(deposited); withdraw(withdrawed))"), initial) === nothing
+# @test evaluate(Meta.parse("deposit_and_withdraw(100, 20)"), initial) === 230
+# @test evaluate(Meta.parse("deposit_and_apply_taxes(deposit, tax) = deposit_and_withdraw(deposit, tax*deposit)"), initial) === nothing
+# @test evaluate(Meta.parse("deposit_and_apply_taxes(100, 0.4)"), initial) === 290.0
+
+# balance = 0
+# deposit(q) = global balance = balance + q
+# withdraw(q) = global balance = balance - q
+# deposit(200)
+# withdraw(50)
+# deposit_and_withdraw(deposited, withdrawed) = (deposit(deposited); withdraw(withdrawed))
+# deposit_and_withdraw(100, 20)
+# deposit_and_apply_taxes(deposit, tax) = deposit_and_withdraw(deposit, tax*deposit)
+# deposit_and_apply_taxes(100, 0.4)
+
+# @test evaluate(Meta.parse("reflexive(exp, x) = exp(x , x)"), initial) === nothing
+# initial
+# 
+# @test evaluate(Meta.parse(" sum(f, a, b) =
+# a > b ?
+# 0 :
+# f(a) + sum(f, a + 1, b)
+# "), initial) === nothing
+# 
+# @test evaluate(Meta.parse("sum(reflexive, 1, 10)"), initial) === 385
+
+@testset "deposit and withdrawl" begin
+    @test evaluate(Meta.parse("reflexive_op(exp, x) = exp(x ,x)"), initial) === nothing
+    @test evaluate(Meta.parse("reflexive_op(+, 4)"), initial) === 8
+end
 
 @testset "Simple operations tests" begin
     @test evaluate(Meta.parse("2 + 3"), initial) == 2 + 3
@@ -146,12 +195,15 @@ end
     @test evaluate(Meta.parse("incr()"), initial) == 1
 end
 
-@testset "accessing a global variable without global giving an error, like the Python inherited behavior" begin
+@testset "defining global access to a variable and doing attributions" begin
     @test evaluate(Meta.parse("counter = 0"), initial) == 0
-    @test evaluate(Meta.parse("global incr() = counter = counter + 1"), initial) === nothing
+    @test evaluate(Meta.parse("incr() = global counter = counter + 1"), initial) === nothing
     @test evaluate(Meta.parse("incr()"), initial) == 1
-    @test evaluate(Meta.parse("incr()"), initial) == 2 # FIXME global form
+    @test evaluate(Meta.parse("incr()"), initial) == 2
 end
+
+
+
 
 @testset "defining vars inside the blocks" begin
     @test evaluate(Meta.parse("(x=1;y=2;;3;)"), initial) == (x=1;y=2;;3;)
@@ -176,6 +228,28 @@ end
     @test evaluate(Meta.parse("deposit(x) = global balance = balance + x"), initial) === nothing
     @test evaluate(Meta.parse("deposit(2)"), initial) === 2
     @test evaluate(Meta.parse("deposit(2)"), initial) === 4
+end
+
+@testset "global show_secret" begin # FIXME
+    @test evaluate(Meta.parse("let secret = 1234; global show_secret() = secret; end"), initial) === nothing
+    @test evaluate(Meta.parse("show_secret()"), initial) === nothing
+end
+
+@testset "defining next without anonym functions" begin
+    @test evaluate(Meta.parse("soma(x, y) = x + y"), initial) === nothing
+    @test evaluate(Meta.parse("menos(x, y) = x - y"), initial) === nothing
+    @test evaluate(Meta.parse("next(i) = (if i < 0 menos else soma end)( i, 1)"), initial) === nothing
+    @test evaluate(Meta.parse("next(1)"), initial) === 2
+end
+
+@testset "Higher Order functions with anonym functions" begin
+    
+    @test evaluate(Meta.parse("sum(f, a, b) =
+    a > b ?
+    0 :
+    f(a) + sum(f, a + 1, b)"), initial) === nothing
+    
+    @test evaluate(Meta.parse("sum(x -> x*x, 1, 10)"), initial) === 385
 end
 
 
