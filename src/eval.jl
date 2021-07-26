@@ -31,7 +31,16 @@ function evaluate(exp, env, glob = false, define_name=true)
             
         elseif is_function_def(exp)
             eval_func_def(exp, env)
+
+        elseif is_and(exp)
+            eval_and(exp, env)
+
+        elseif is_or(exp)
+            eval_or(exp, env)
+
+
         end
+
 
 
     else

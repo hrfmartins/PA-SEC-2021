@@ -181,7 +181,10 @@ function make_let_block(exp)
             end
         end
     end
-    q = string(q, exp.args[2].args[1], ";")
+
+    for e in exp.args[2].args # Iterate over the  body that's not part of the definition.
+        q = string(q, e, ";")
+    end
     return Meta.parse(string(q, " end"))
 end
 
@@ -327,6 +330,8 @@ function def_name(exp)
         exp.args[1]
     elseif isa(exp.args[1], Expr) && exp.args[1].head == :call # function definition
         exp.args[1].args[1]
+    elseif isa(exp.args[1], Expr) && exp.args[1].head == :(=) # global variables
+        exp.args[1].args[1]
     end
 end
 
@@ -366,8 +371,41 @@ function eval_def(exp, env, define_name)
         nothing
     else
         evaluated = evaluate(value, env)
-        augment_destructively(def_name(exp), evaluated, exp, env)
-        evaluated
+
+        if (exp.head == :global) # its an attribution!
+            name = def_name(exp)
+            update(find_bind(def_name(exp), evaluated, env), env, name, evaluated)
+            evaluate(name, env)
+            
+        else
+            augment_destructively(def_name(exp), evaluated, exp, env)
+            evaluated
+        end
+    end
+
+end
+
+update(tuplo, env, name, value) = env[tuplo[1]][tuplo[2]] = (Symbol(name), value)
+
+
+
+function find_bind(name, value, env, frame_no = 1)
+    function look_up_and_update(frame)
+        if frame == [] 
+            frame_no = frame_no + 1                               # everytime we go deeper within frames
+            find_bind(name, value, env[2:length(env)], frame_no)
+        elseif (name == frame[1][1])
+            return (frame_no, index)                    # Returns the tuple to be updated
+        else
+            index = index + 1
+            look_up_and_update(frame[2:length(frame)])
+        end
+    end
+    if (env == []) # Reached the end and it wasnt there, it's unbound!
+        error(string("Unbound name - ", name, " - EVAL-NAME"))
+    else
+        index = 1
+        look_up_and_update(env[1]) #recursively call with the rest of the list
     end
 
 end
@@ -407,3 +445,12 @@ function is_global(exp)
     end
     exp.head == :global ? true : false
 end
+
+function eval_and(exp, env) 
+    evaluate(exp.args[1], env) && evaluate(exp.args[2], env)
+end
+
+function eval_or(exp, env) 
+    evaluate(exp.args[1], env) || evaluate(exp.args[2], env)
+end
+

@@ -66,6 +66,7 @@ end
     @test evaluate(Meta.parse("let x(y)=y; x(1); end"), initial) == (let x(y)=y; x(1); end)
     @test evaluate(Meta.parse("let x(y)=y+1; x(1); end"), initial) == (let x(y)=y+1; x(1); end)
     @test evaluate(Meta.parse("let x(y,z)=y+z; x(1,2); end"), initial) == (let x(y,z)=y+z; x(1,2); end)
+    @test evaluate(Meta.parse("let x = 2; x = 3; x + 2; end"), initial) == 5 # With mixed declarations in the body
 end
 
 @testset "Let form with a mix of variables and functions" begin
@@ -157,6 +158,24 @@ end
     @test evaluate(Meta.parse("x"), initial) == (x=1;y=2;;3;x)
     @test evaluate(Meta.parse("y"), initial) == (x=1;y=2;;3;y)
     @test evaluate(Meta.parse("(x=1;y=2;;3;) == x + y"), initial) == ((x=1;y=2;;3;) == x + y)
+end
+
+@testset "short cirtuit evaluators OR" begin
+    @test evaluate(Meta.parse("true || true"), initial) == true
+    @test evaluate(Meta.parse("false || true"), initial) == true
+    @test evaluate(Meta.parse("true || false"), initial) == true
+    @test evaluate(Meta.parse("false || false"), initial) == false
+    @test evaluate(Meta.parse("(true || false) && false"), initial) == false
+    @test evaluate(Meta.parse("let x = 3; if x % 2 == 0 || x % 3 == 0 \"divisible by 3 or 2\" else \"not\" end ; end"), initial) == "divisible by 3 or 2"
+    @test evaluate(Meta.parse("let x = 7; if x % 2 == 0 || x % 3 == 0 \"divisible by 3 or 2\" else \"not\" end ; end"), initial) == "not"
+end
+
+@testset "global variables used inside functions" begin
+    initial = empty_environment()
+    @test evaluate(Meta.parse("balance = 0"), initial) === 0
+    @test evaluate(Meta.parse("deposit(x) = global balance = balance + x"), initial) === nothing
+    @test evaluate(Meta.parse("deposit(2)"), initial) === 2
+    @test evaluate(Meta.parse("deposit(2)"), initial) === 4
 end
 
 
