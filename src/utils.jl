@@ -349,37 +349,27 @@ function eval_def(exp, env, define_name)
         value, f_or_v = def_init(exp)
     end
 
-    if (define_name)
-        if (f_or_v) # if its a function
-            name = :placeholder
-            body = :placeholder
-            if (exp.head == :global)
-                name = def_name(exp.args[1])
-                body = def_body(exp.args[1])   #FIXME If we are inside an inner scope and we define a global, we need to push the thing we're evaluating to the global scope!
-                params = def_params(exp.args[1])
-            else
-                name = def_name(exp)
-                body = def_body(exp)
-                params = def_params(exp)
-            end
-            augment_destructively(name, make_function(params, body), exp, env)
-            nothing
-        else
-            evaluated = evaluate(value, env)
-            augment_destructively(def_name(exp), evaluated, exp, env)
-            evaluated
-        end
-    else        # will be useful in the evaluation of let forms
-        if (f_or_v)
-            augment_environment(def_name(exp), make_function(def_params(exp), def_body(exp)), env)
-            nothing
-        else
-            evaluated = evaluate(value, env)
-            augment_environment(def_name(exp), evaluated, env)
-            evaluated
-        end
 
+    if (f_or_v) # if its a function
+        name = :placeholder
+        body = :placeholder
+        if (exp.head == :global)
+            name = def_name(exp.args[1])
+            body = def_body(exp.args[1])   #FIXME If we are inside an inner scope and we define a global, we need to push the thing we're evaluating to the global scope!
+            params = def_params(exp.args[1])
+        else
+            name = def_name(exp)
+            body = def_body(exp)
+            params = def_params(exp)
+        end
+        augment_destructively(name, make_function(params, body), exp, env)
+        nothing
+    else
+        evaluated = evaluate(value, env)
+        augment_destructively(def_name(exp), evaluated, exp, env)
+        evaluated
     end
+
 end
 
 function augment_destructively(name, value, exp, env)

@@ -5,16 +5,6 @@ using Test
 
 initial = empty_environment()
 
-initial
-
-evaluate(Meta.parse("f(x,y) = (println(x); println(y);)"), initial)
-
-evaluate(Meta.parse("f(1,2)"), initial)
-
-@test evaluate(Meta.parse("(x=1;;;3;)"), initial) == 3
-initial
-@test evaluate(Meta.parse("x"), initial) == 1
-
 @testset "Simple operations tests" begin
     @test evaluate(Meta.parse("2 + 3"), initial) == 2 + 3
     @test evaluate(Meta.parse("2 - 3"), initial) == 2 - 3
