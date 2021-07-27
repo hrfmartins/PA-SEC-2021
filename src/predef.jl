@@ -36,8 +36,8 @@ end
 
 function primitive_or_user_def(func, env)
     if (func in pre_def_set)
-        newEnv = deepcopy(env)
-        if (func in setdiff!(newEnv, pre_def)) # its user defined and it was a primary function, its in the set and it was initially
+        if (func in pre_def && func in env[length(env)][1:len(env)-len(pre_def)]) # the expression on the right gives us the new defenitions (and redefenitions of primary)
+         # its user defined and it was a primary function, its in the set and it was initially
             return false
         else
             return true
@@ -62,7 +62,7 @@ end
 
 function apply_primitive_single(func, args)
     x = Meta.parse(string(Symbol(func[2][2].args[1]), "(", args[1], ")"))
-    eval(x)
+    eval(x) 
 end
 
 pre_def = [ make_primitive(+),

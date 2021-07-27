@@ -128,7 +128,7 @@ function eval_let(exp, env)
     ## extended_environment = augment_environment(names, inits, env)
     pushfirst!(env, []) # a new frame for scope of the let form
     expr = make_let_block(exp)
-    evaluated = evaluate(expr, env)
+    evaluated = evaluate(expr, env, env)
     deleteat!(env, 1)
     evaluated
 end
@@ -217,7 +217,11 @@ function eval_elseif(exp,env)
     elseif (exp.head == :elseif && evaluate(exp.args[1].args[1], env))
         return evaluate(exp.args[2].args[1], env)
     else
-        return eval_elseif(exp.args[3], env)
+        if (length(exp.args) == 3)
+            return eval_elseif(exp.args[3], env)
+        else
+            return nothing
+        end
     end
 end
 
@@ -225,6 +229,15 @@ end
 function augment_environment(names, values, env)
     #newEnv = deepcopy(env)
     pushfirst!(env, map((i, j) -> (i,j), names, values))
+end
+
+function augment_environment_global(names, values, env)
+    #newEnv = deepcopy(env)
+    tups = map((i, j) -> (i,j), names, values)
+    for e in tups
+        pushfirst!(env[length(env)], e)
+    end
+        vcat(env, [])
 end
 
 function empty_environment()
@@ -258,14 +271,11 @@ function local_or_global(x)
     end
 end
 
-function flet_functions(expr)
-    [make_function(flet_params(x), flet_func_body(x)) for x in expr]
+function make_function(params, body, env, glob = false)
+    return (:function, (params, body, deepcopy(env) , glob ? :global : :local))
 end
 
-
-function make_function(params, body)
-    return (:function, (params, body))
-end
+funct_env(func) = func[2][3]
 
 function is_function(obj)
     if (isa(obj, Pair)) 
@@ -292,8 +302,13 @@ function eval_call(exp, env)
         end
 
     else
-        extended_env = augment_environment(function_parameters(func), args, env)
-        evaluated = evaluate(function_body(func), extended_env)
+
+        extended_env = augment_environment(function_parameters(func), args,  funct_env(func))
+        env = augment_environment(function_parameters(func), args,  env)
+
+
+        evaluated = evaluate(function_body(func), extended_env, env, func[2][4] == :global)
+        deleteat!(extended_env, 1)
         deleteat!(env, 1)
         evaluated
 
@@ -306,30 +321,26 @@ lambda_parameters(exp) = isa(exp.args[1], Symbol) ? [exp.args[1]] : exp.args[1].
 
 lambda_body(exp) = exp.args[2]
 
-eval_lambda(exp, env) = return make_function(lambda_parameters(exp), lambda_body(exp))
+eval_lambda(exp, env, glob) = return make_function(lambda_parameters(exp), lambda_body(exp), env, glob)
 
 
 is_block(exp) = exp.head == :block ? true : false 
 
-function eval_block(exp, env)
+function eval_block(exp, env, initial_env, glob)
     if isa(exp.args[1], LineNumberNode)
-        eval_chain_block(removeLNN(exp.args[2:length(exp.args)]), env)
+        eval_chain_block(exp.args[2:length(exp.args)], env, initial_env, glob)
     else
-        eval_chain_block(removeLNN(exp.args), env)
+        eval_chain_block(exp.args, env, initial_env, glob)
     end
 end
 
-function eval_chain_block(blocks, env)
+function eval_chain_block(blocks, env, initial_env, glob)
     if (length(blocks) == 1)
-        return evaluate(blocks[1], env)
+        return evaluate(blocks[1], env, initial_env, glob)
     else
-        evaluate(blocks[1], env)
-        eval_chain_block(blocks[2:length(blocks)], env)
+        evaluate(blocks[1], env, initial_env, glob)
+        eval_chain_block(blocks[2:length(blocks)], env, initial_env, glob)
     end
-end
-
-function removeLNN(blocks)
-    filter(x-> !isa(x, LineNumberNode),  blocks)
 end
 
 is_define(exp) = (exp.head == :(=) && length(exp.args)) == 2 || ((exp.head == :global && exp.args[1].head == :(=) && length(exp.args[1].args) == 2))
@@ -356,7 +367,7 @@ function def_init(exp)
     end
 end
 
-function eval_def(exp, env, define_name)
+function eval_def(exp, env, intitial_env, glob)
     if (exp.head == :global)
         value, f_or_v = def_init(exp.args[1]) # function or value
     else
@@ -369,24 +380,38 @@ function eval_def(exp, env, define_name)
         body = :placeholder
         if (exp.head == :global)
             name = def_name(exp.args[1])
-            body = def_body(exp.args[1])   #FIXME If we are inside an inner scope and we define a global, we need to push the thing we're evaluating to the global scope!
+            body = def_body(exp.args[1])
             params = def_params(exp.args[1])
+            augment_destructively(name, make_function(params, body, env, true), exp, env)
         else
             name = def_name(exp)
             body = def_body(exp)
             params = def_params(exp)
+            augment_destructively(name, make_function(params, body, env), exp, env)
+            pushfirst!(env[1][1][2][2][3], env[length(env)]) # Make the function aware of itself
         end
-        augment_destructively(name, make_function(params, body), exp, env)
+
         nothing
     else
-        evaluated = evaluate(value, env)
-
-        if (exp.head == :global) # its an attribution!
+        if (glob)
+            evaluated = evaluate(value, env)
             name = def_name(exp)
             update(find_bind(def_name(exp), evaluated, env), env, name, evaluated)
             evaluate(name, env)
+        elseif (exp.head == :global ) # its an attribution or a global variable definition!
+            evaluated = evaluate(value, intitial_env, env, true)
+            name = def_name(exp)
+            found_bound = find_bind(def_name(exp), evaluated, intitial_env)
+            if (found_bound == (0,0))
+                augment_destructively(name, evaluated, exp, env)
+                return evaluated
+            else
+                update(found_bound, intitial_env, name, evaluated)
+            end
+            evaluate(name, intitial_env)
             
         else
+            evaluated = evaluate(value, env)
             augment_destructively(def_name(exp), evaluated, exp, env)
             evaluated
         end
@@ -395,6 +420,9 @@ function eval_def(exp, env, define_name)
 end
 
 update(tuplo, env, name, value) = env[tuplo[1]][tuplo[2]] = (Symbol(name), value)
+
+update_initial(tuplo, env, name, value) = env[tuplo[1]][tuplo[2]] = (Symbol(name), value)
+
 
 
 
@@ -411,7 +439,7 @@ function find_bind(name, value, env, frame_no = 1)
         end
     end
     if (env == []) # Reached the end and it wasnt there, it's unbound!
-        error(string("Unbound name - ", name, " - EVAL-NAME"))
+        (0, 0) 
     else
         index = 1
         look_up_and_update(env[1]) #recursively call with the rest of the list
@@ -435,7 +463,7 @@ def_body(exp) = exp.args[2]
 
 is_function_def(exp) = exp.head == :function ? true : false 
 
-eval_func_def(exp, env) = (augment_destructively(def_name(exp), make_function(def_params(exp), make_block(funct_body(exp))), exp, env); return nothing)
+eval_func_def(exp, env) = (augment_destructively(def_name(exp), make_function(def_params(exp), make_block(funct_body(exp)), env), exp, env); return nothing)
 
 funct_body(exp) = exp.args[2].args
 
